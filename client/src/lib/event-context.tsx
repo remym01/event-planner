@@ -1,165 +1,200 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { z } from 'zod';
+import React, { createContext, useContext, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { EventConfig, Item, Rsvp } from '@shared/schema';
 
 // --- Types ---
 
-export type Item = {
-  id: string;
-  name: string;
-  assignee: string | null; // Name of person bringing it
-};
-
-export type EventConfig = {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  backgroundImageUrl?: string;
-  themeColor?: string;
-  fontStyle?: 'serif' | 'sans' | 'mono';
-  confirmationMessage?: string;
-};
-
-export type RSVP = {
-  id: string;
-  firstName: string;
-  attending: boolean;
-  note?: string;
-  plusOne: boolean;
-  itemId?: string | null; // ID of the item they are bringing
-};
+export type RSVP = Rsvp & { itemId?: number | null };
 
 type EventContextType = {
-  config: EventConfig;
-  updateConfig: (newConfig: Partial<EventConfig>) => void;
+  config: EventConfig | undefined;
+  updateConfig: (newConfig: Partial<EventConfig>) => Promise<void>;
   
   items: Item[];
-  addItem: (name: string) => void;
-  removeItem: (id: string) => void;
-  claimItem: (itemId: string, userName: string) => void;
-  unclaimItem: (itemId: string) => void; // For admin or if user changes mind
+  addItem: (name: string) => Promise<void>;
+  removeItem: (id: number) => Promise<void>;
+  claimItem: (itemId: number, userName: string) => Promise<void>;
+  unclaimItem: (itemId: number) => Promise<void>;
   
-  rsvps: RSVP[];
-  addRSVP: (rsvp: Omit<RSVP, 'id'>) => void;
+  rsvps: Rsvp[];
+  addRSVP: (rsvp: Omit<Rsvp, 'id' | 'createdAt'>) => Promise<void>;
   
   // "Session" state for the current user filling the form
-  currentUser: RSVP | null;
-  setCurrentUser: (user: RSVP | null) => void;
+  currentUser: Rsvp | null;
+  setCurrentUser: (user: Rsvp | null) => void;
   
   // Admin helpers
-  resetEverything: () => void;
   resetSession: () => void;
+  
+  // Loading states
+  isLoading: boolean;
 };
-
-// --- Mock Initial Data ---
-
-const INITIAL_CONFIG: EventConfig = {
-  title: "The Peterson's Annual Dinner",
-  description: "Join us for an evening of good food, great company, and warm memories. Please let us know if you can make it!",
-  date: "2024-12-20",
-  time: "18:00",
-  location: "123 Maple Avenue",
-  backgroundImageUrl: "",
-  themeColor: "hsl(145 20% 35%)", // Sage Green default
-  fontStyle: "serif",
-  confirmationMessage: "We're delighted you can join us. Your response has been recorded."
-};
-
-const INITIAL_ITEMS: Item[] = [
-  { id: '1', name: 'Cabernet Sauvignon (2 bottles)', assignee: null },
-  { id: '2', name: 'Fresh Fruit Tart', assignee: null },
-  { id: '3', name: 'Cheese Platter', assignee: null },
-  { id: '4', name: 'Artisan Bread', assignee: null },
-  { id: '5', name: 'Sparkling Water', assignee: 'Aunt May' }, // Pre-filled example
-];
 
 // --- Context ---
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
 export function EventProvider({ children }: { children: React.ReactNode }) {
-  // In a real app, this would come from a backend. 
-  // We use localStorage to simulate persistence across refreshes so the user can test "refreshing" page.
-  
-  const [config, setConfig] = useState<EventConfig>(() => {
-    const saved = localStorage.getItem('mock_event_config');
-    return saved ? JSON.parse(saved) : INITIAL_CONFIG;
+  const queryClient = useQueryClient();
+  const [currentUser, setCurrentUser] = useState<Rsvp | null>(null);
+
+  // Fetch event config
+  const { data: config, isLoading: configLoading } = useQuery({
+    queryKey: ['config'],
+    queryFn: async () => {
+      const res = await fetch('/api/config');
+      if (!res.ok) throw new Error('Failed to fetch config');
+      return res.json() as Promise<EventConfig>;
+    },
   });
 
-  const [items, setItems] = useState<Item[]>(() => {
-    const saved = localStorage.getItem('mock_event_items');
-    return saved ? JSON.parse(saved) : INITIAL_ITEMS;
+  // Fetch items
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ['items'],
+    queryFn: async () => {
+      const res = await fetch('/api/items');
+      if (!res.ok) throw new Error('Failed to fetch items');
+      return res.json() as Promise<Item[]>;
+    },
   });
 
-  const [rsvps, setRsvps] = useState<RSVP[]>(() => {
-    const saved = localStorage.getItem('mock_event_rsvps');
-    return saved ? JSON.parse(saved) : [];
+  // Fetch RSVPs
+  const { data: rsvps = [], isLoading: rsvpsLoading } = useQuery({
+    queryKey: ['rsvps'],
+    queryFn: async () => {
+      const res = await fetch('/api/rsvps');
+      if (!res.ok) throw new Error('Failed to fetch RSVPs');
+      return res.json() as Promise<Rsvp[]>;
+    },
   });
-  
-  const [currentUser, setCurrentUser] = useState<RSVP | null>(null);
 
-  // Persistence Effects
-  useEffect(() => localStorage.setItem('mock_event_config', JSON.stringify(config)), [config]);
-  useEffect(() => localStorage.setItem('mock_event_items', JSON.stringify(items)), [items]);
-  useEffect(() => localStorage.setItem('mock_event_rsvps', JSON.stringify(rsvps)), [rsvps]);
+  // Update config mutation
+  const updateConfigMutation = useMutation({
+    mutationFn: async (newConfig: Partial<EventConfig>) => {
+      const res = await fetch('/api/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig),
+      });
+      if (!res.ok) throw new Error('Failed to update config');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config'] });
+    },
+  });
+
+  // Add item mutation
+  const addItemMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, assignee: null }),
+      });
+      if (!res.ok) throw new Error('Failed to add item');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+
+  // Remove item mutation
+  const removeItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to remove item');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+
+  // Update item assignee mutation
+  const updateItemAssigneeMutation = useMutation({
+    mutationFn: async ({ id, assignee }: { id: number; assignee: string | null }) => {
+      const res = await fetch(`/api/items/${id}/assignee`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignee }),
+      });
+      if (!res.ok) throw new Error('Failed to update item');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+
+  // Add RSVP mutation
+  const addRSVPMutation = useMutation({
+    mutationFn: async (rsvp: Omit<Rsvp, 'id' | 'createdAt'>) => {
+      const res = await fetch('/api/rsvps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rsvp),
+      });
+      if (!res.ok) throw new Error('Failed to add RSVP');
+      return res.json() as Promise<Rsvp>;
+    },
+    onSuccess: (newRsvp) => {
+      queryClient.invalidateQueries({ queryKey: ['rsvps'] });
+      setCurrentUser(newRsvp);
+    },
+  });
 
   // Actions
-  const updateConfig = (newConfig: Partial<EventConfig>) => {
-    setConfig(prev => ({ ...prev, ...newConfig }));
+  const updateConfig = async (newConfig: Partial<EventConfig>) => {
+    await updateConfigMutation.mutateAsync(newConfig);
   };
 
-  const addItem = (name: string) => {
-    const newItem: Item = { id: Math.random().toString(36).substr(2, 9), name, assignee: null };
-    setItems(prev => [...prev, newItem]);
+  const addItem = async (name: string) => {
+    await addItemMutation.mutateAsync(name);
   };
 
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
+  const removeItem = async (id: number) => {
+    await removeItemMutation.mutateAsync(id);
   };
 
-  const claimItem = (itemId: string, userName: string) => {
-    setItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, assignee: userName } : item
-    ));
-  };
-  
-  const unclaimItem = (itemId: string) => {
-    setItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, assignee: null } : item
-    ));
+  const claimItem = async (itemId: number, userName: string) => {
+    await updateItemAssigneeMutation.mutateAsync({ id: itemId, assignee: userName });
   };
 
-  const addRSVP = (newRSVP: Omit<RSVP, 'id'>) => {
-    const rsvpWithId = { ...newRSVP, id: Math.random().toString(36).substr(2, 9) };
-    setRsvps(prev => [...prev, rsvpWithId]);
-    setCurrentUser(rsvpWithId);
+  const unclaimItem = async (itemId: number) => {
+    await updateItemAssigneeMutation.mutateAsync({ id: itemId, assignee: null });
+  };
+
+  const addRSVP = async (newRSVP: Omit<Rsvp, 'id' | 'createdAt'>) => {
+    const rsvp = await addRSVPMutation.mutateAsync(newRSVP);
     
-    // If they selected an item, claim it!
+    // If they selected an item, claim it
     if (newRSVP.itemId) {
-      claimItem(newRSVP.itemId, newRSVP.firstName);
+      await claimItem(newRSVP.itemId, newRSVP.firstName);
     }
-  };
-
-  const resetEverything = () => {
-    setConfig(INITIAL_CONFIG);
-    setItems(INITIAL_ITEMS);
-    setRsvps([]);
-    setCurrentUser(null);
-    localStorage.clear();
   };
 
   const resetSession = () => {
     setCurrentUser(null);
   };
 
+  const isLoading = configLoading || itemsLoading || rsvpsLoading;
+
   return (
     <EventContext.Provider value={{
-      config, updateConfig,
-      items, addItem, removeItem, claimItem, unclaimItem,
-      rsvps, addRSVP,
-      currentUser, setCurrentUser,
-      resetEverything, resetSession
+      config,
+      updateConfig,
+      items,
+      addItem,
+      removeItem,
+      claimItem,
+      unclaimItem,
+      rsvps,
+      addRSVP,
+      currentUser,
+      setCurrentUser,
+      resetSession,
+      isLoading,
     }}>
       {children}
     </EventContext.Provider>
@@ -171,3 +206,5 @@ export function useEvent() {
   if (!context) throw new Error("useEvent must be used within an EventProvider");
   return context;
 }
+
+export type { EventConfig, Item };

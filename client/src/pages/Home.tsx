@@ -1,15 +1,15 @@
 import { RSVPForm } from "@/components/forms/RSVPForm";
 import { AdminControls } from "@/components/admin/HostControls";
-import { EventProvider, useEvent } from "@/lib/event-context";
+import { useEvent } from "@/lib/event-context";
 import bgImage from "@assets/generated_images/elegant_dinner_party_table_setting_with_soft_lighting.png";
 import { useEffect } from "react";
 
-function EventContent() {
+export default function Home() {
   const { config } = useEvent();
   
   // Apply theme color dynamically
   useEffect(() => {
-    if (config.themeColor) {
+    if (config?.themeColor) {
       document.documentElement.style.setProperty('--primary', config.themeColor);
       document.documentElement.style.setProperty('--ring', config.themeColor);
       // Approximate a lighter shade for backgrounds/accents if needed, or just rely on opacity
@@ -19,18 +19,18 @@ function EventContent() {
     const root = document.getElementById('root');
     if (root) {
       root.classList.remove('font-serif', 'font-sans', 'font-mono');
-      if (config.fontStyle === 'serif') root.classList.add('font-serif');
-      if (config.fontStyle === 'sans') root.classList.add('font-sans');
-      if (config.fontStyle === 'mono') root.classList.add('font-mono');
+      if (config?.fontStyle === 'serif') root.classList.add('font-serif');
+      if (config?.fontStyle === 'sans') root.classList.add('font-sans');
+      if (config?.fontStyle === 'mono') root.classList.add('font-mono');
     }
-  }, [config.themeColor, config.fontStyle]);
+  }, [config?.themeColor, config?.fontStyle]);
 
   return (
-    <div className={`min-h-screen w-full bg-background flex flex-col items-center justify-center relative overflow-hidden ${config.fontStyle === 'serif' ? 'font-serif' : config.fontStyle === 'mono' ? 'font-mono' : 'font-sans'}`}>
+    <div className={`min-h-screen w-full bg-background flex flex-col items-center justify-center relative overflow-hidden ${config?.fontStyle === 'serif' ? 'font-serif' : config?.fontStyle === 'mono' ? 'font-mono' : 'font-sans'}`}>
       {/* Background Layer with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={config.backgroundImageUrl || bgImage} 
+          src={config?.backgroundImageUrl || bgImage} 
           alt="Background" 
           className="w-full h-full object-cover opacity-90 transition-opacity duration-500"
         />
@@ -56,13 +56,5 @@ function EventContent() {
       {/* Admin Layer */}
       <AdminControls />
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <EventProvider>
-      <EventContent />
-    </EventProvider>
   );
 }

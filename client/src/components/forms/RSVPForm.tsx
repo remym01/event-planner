@@ -20,7 +20,7 @@ const formSchema = z.object({
   attending: z.enum(["yes", "no"]),
   plusOne: z.boolean().default(false),
   note: z.string().optional(),
-  itemId: z.string().optional(),
+  itemId: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -36,7 +36,7 @@ export function RSVPForm() {
       attending: "yes",
       plusOne: false,
       note: "",
-      itemId: "none",
+      itemId: undefined,
     },
   });
 
@@ -52,8 +52,8 @@ export function RSVPForm() {
       firstName: data.firstName,
       attending: data.attending === "yes",
       plusOne: data.plusOne,
-      note: data.note,
-      itemId: data.itemId === "none" ? undefined : data.itemId,
+      note: data.note || undefined,
+      itemId: data.itemId,
     });
     
     setIsSubmitting(false);
@@ -69,7 +69,7 @@ export function RSVPForm() {
           <h2 className="text-2xl font-serif text-primary">Thank you, {currentUser.firstName}!</h2>
           <p className="text-muted-foreground">
             {currentUser.attending 
-              ? (config.confirmationMessage || "We're delighted you can join us. Your response has been recorded.")
+              ? (config?.confirmationMessage || "We're delighted you can join us. Your response has been recorded.")
               : "We're sorry you can't make it, but thank you for letting us know!"}
           </p>
           
@@ -93,13 +93,13 @@ export function RSVPForm() {
   return (
     <Card className="w-full max-w-md mx-auto border-none shadow-soft bg-white/95 backdrop-blur-sm">
       <CardHeader className="text-center pb-2">
-        <CardTitle className="text-3xl font-serif text-primary">{config.title}</CardTitle>
-        <CardDescription className="text-base mt-2 font-light">{config.description}</CardDescription>
+        <CardTitle className="text-3xl font-serif text-primary">{config?.title}</CardTitle>
+        <CardDescription className="text-base mt-2 font-light">{config?.description}</CardDescription>
         
         <div className="flex justify-center gap-4 mt-4 text-xs text-muted-foreground uppercase tracking-widest">
-           <span>{config.date}</span>
+           <span>{config?.date}</span>
            <span>|</span>
-           <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {config.time}</span>
+           <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {config?.time}</span>
         </div>
       </CardHeader>
       
@@ -186,20 +186,20 @@ export function RSVPForm() {
                     <Utensils className="w-3 h-3 text-primary" />
                     Potluck Contribution
                   </Label>
-                  <Select onValueChange={(val) => form.setValue("itemId", val)}>
+                  <Select onValueChange={(val) => form.setValue("itemId", val === "none" ? undefined : parseInt(val))}>
                     <SelectTrigger className="w-full h-12 bg-white border-border focus:ring-1 focus:ring-primary/20 text-base px-4">
                       <SelectValue placeholder="Select a dish to bring (Optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">I'll just bring myself</SelectItem>
                       {availableItems.map(item => (
-                        <SelectItem key={item.id} value={item.id}>
+                        <SelectItem key={item.id} value={item.id.toString()}>
                           {item.name}
                         </SelectItem>
                       ))}
                       {/* Show unavailable items as disabled so user sees they are taken */}
                       {items.filter(i => i.assignee).map(item => (
-                        <SelectItem key={item.id} value={item.id} disabled className="opacity-50 italic">
+                        <SelectItem key={item.id} value={item.id.toString()} disabled className="opacity-50 italic">
                           {item.name} (Taken by {item.assignee})
                         </SelectItem>
                       ))}

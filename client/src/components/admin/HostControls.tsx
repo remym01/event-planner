@@ -17,7 +17,7 @@ export function AdminControls() {
     config, updateConfig, 
     items, addItem, removeItem, unclaimItem,
     rsvps, 
-    resetEverything, resetSession 
+    resetSession 
   } = useEvent();
   
   const { toast } = useToast();
@@ -60,8 +60,8 @@ export function AdminControls() {
   };
 
   const mailToGuests = () => {
-    const subject = encodeURIComponent(`You're invited: ${config.title}`);
-    const body = encodeURIComponent(`Hi everyone,\n\nPlease RSVP for ${config.title} using this link:\n${window.location.href}\n\nBest,\nHost`);
+    const subject = encodeURIComponent(`You're invited: ${config?.title}`);
+    const body = encodeURIComponent(`Hi everyone,\n\nPlease RSVP for ${config?.title} using this link:\n${window.location.href}\n\nBest,\nHost`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
@@ -127,7 +127,7 @@ export function AdminControls() {
                  <Label className="text-xs font-medium">Background Image URL</Label>
                  <div className="flex gap-2">
                    <Input 
-                     value={config.backgroundImageUrl || ''} 
+                     value={config?.backgroundImageUrl || ''} 
                      onChange={(e) => updateConfig({ backgroundImageUrl: e.target.value })}
                      placeholder="Paste image URL here..."
                      className="text-xs"
@@ -137,7 +137,7 @@ export function AdminControls() {
                      size="icon" 
                      title="Revert to Original"
                      onClick={() => updateConfig({ backgroundImageUrl: "" })}
-                     disabled={!config.backgroundImageUrl}
+                     disabled={!config?.backgroundImageUrl}
                    >
                      <RotateCcw className="w-4 h-4" />
                    </Button>
@@ -149,7 +149,7 @@ export function AdminControls() {
                <div className="space-y-2">
                  <Label className="text-xs font-medium flex items-center gap-2"><Type className="w-3 h-3"/> Font Style</Label>
                  <RadioGroup 
-                   value={config.fontStyle || 'serif'} 
+                   value={config?.fontStyle || 'serif'} 
                    onValueChange={(val) => updateConfig({ fontStyle: val as any })}
                    className="flex gap-2"
                  >
@@ -182,7 +182,7 @@ export function AdminControls() {
                      <button
                        key={color.name}
                        onClick={() => updateConfig({ themeColor: color.value })}
-                       className={`w-full aspect-square rounded-full border-2 transition-all ${config.themeColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary/30' : 'border-transparent'}`}
+                       className={`w-full aspect-square rounded-full border-2 transition-all ${config?.themeColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary/30' : 'border-transparent'}`}
                        style={{ backgroundColor: color.value }}
                        title={color.name}
                      />
@@ -198,7 +198,7 @@ export function AdminControls() {
                 <Label htmlFor="title">Event Title</Label>
                 <Input 
                   id="title" 
-                  value={config.title} 
+                  value={config?.title || ''} 
                   onChange={(e) => updateConfig({ title: e.target.value })} 
                 />
               </div>
@@ -206,7 +206,7 @@ export function AdminControls() {
                 <Label htmlFor="desc">Description</Label>
                 <Textarea 
                   id="desc" 
-                  value={config.description} 
+                  value={config?.description || ''} 
                   onChange={(e) => updateConfig({ description: e.target.value })} 
                 />
               </div>
@@ -214,7 +214,7 @@ export function AdminControls() {
                 <Label htmlFor="confMsg">Confirmation Message</Label>
                 <Textarea 
                   id="confMsg" 
-                  value={config.confirmationMessage} 
+                  value={config?.confirmationMessage || ''} 
                   onChange={(e) => updateConfig({ confirmationMessage: e.target.value })}
                   placeholder="We're delighted you can join us..."
                   className="h-20"
@@ -226,7 +226,7 @@ export function AdminControls() {
                   <Label htmlFor="date">Date</Label>
                   <Input 
                     id="date" 
-                    value={config.date} 
+                    value={config?.date || ''} 
                     onChange={(e) => updateConfig({ date: e.target.value })} 
                   />
                 </div>
@@ -234,7 +234,7 @@ export function AdminControls() {
                   <Label htmlFor="time">Time</Label>
                   <Input 
                     id="time" 
-                    value={config.time} 
+                    value={config?.time || ''} 
                     onChange={(e) => updateConfig({ time: e.target.value })} 
                   />
                 </div>
@@ -320,18 +320,14 @@ export function AdminControls() {
             {/* Section: Testing Controls */}
             <div className="space-y-4 pt-4 border-t">
               <h3 className="uppercase text-xs font-semibold tracking-widest text-muted-foreground">Demo Actions</h3>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Button variant="default" onClick={resetSession} className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   New Guest
                 </Button>
-                <Button variant="outline" onClick={resetEverything} className="w-full text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive">
-                  <Trash className="w-4 h-4 mr-2" />
-                  Reset Data
-                </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                "New Guest" clears your session so you can test as a second user. "Reset Data" clears all configuration and RSVPs.
+                "New Guest" clears your session so you can test RSVP-ing as a different user.
               </p>
             </div>
             
