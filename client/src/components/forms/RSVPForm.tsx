@@ -69,7 +69,7 @@ export function RSVPForm() {
           <h2 className="text-2xl font-serif text-primary">Thank you, {currentUser.firstName}!</h2>
           <p className="text-muted-foreground">
             {currentUser.attending 
-              ? "We're delighted you can join us. Your response has been recorded."
+              ? (config.confirmationMessage || "We're delighted you can join us. Your response has been recorded.")
               : "We're sorry you can't make it, but thank you for letting us know!"}
           </p>
           
@@ -97,9 +97,9 @@ export function RSVPForm() {
         <CardDescription className="text-base mt-2 font-light">{config.description}</CardDescription>
         
         <div className="flex justify-center gap-4 mt-4 text-xs text-muted-foreground uppercase tracking-widest">
-           <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {config.time}</span>
-           <span>|</span>
            <span>{config.date}</span>
+           <span>|</span>
+           <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {config.time}</span>
         </div>
       </CardHeader>
       

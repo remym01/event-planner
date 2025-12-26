@@ -18,6 +18,7 @@ export type EventConfig = {
   backgroundImageUrl?: string;
   themeColor?: string;
   fontStyle?: 'serif' | 'sans' | 'mono';
+  confirmationMessage?: string;
 };
 
 export type RSVP = {
@@ -61,7 +62,8 @@ const INITIAL_CONFIG: EventConfig = {
   location: "123 Maple Avenue",
   backgroundImageUrl: "",
   themeColor: "hsl(145 20% 35%)", // Sage Green default
-  fontStyle: "serif"
+  fontStyle: "serif",
+  confirmationMessage: "We're delighted you can join us. Your response has been recorded."
 };
 
 const INITIAL_ITEMS: Item[] = [

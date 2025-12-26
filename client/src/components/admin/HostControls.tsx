@@ -210,6 +210,17 @@ export function AdminControls() {
                   onChange={(e) => updateConfig({ description: e.target.value })} 
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confMsg">Confirmation Message</Label>
+                <Textarea 
+                  id="confMsg" 
+                  value={config.confirmationMessage} 
+                  onChange={(e) => updateConfig({ confirmationMessage: e.target.value })}
+                  placeholder="We're delighted you can join us..."
+                  className="h-20"
+                />
+                <p className="text-[10px] text-muted-foreground">Shown to guests after they accept.</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                  <div className="grid gap-2">
                   <Label htmlFor="date">Date</Label>
