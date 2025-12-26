@@ -107,22 +107,22 @@ export function RSVPForm() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           
           {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="firstName" className="uppercase text-xs tracking-wider text-muted-foreground">Your Name</Label>
+          <div className="space-y-3">
+            <Label htmlFor="firstName" className="uppercase text-xs font-semibold tracking-widest text-muted-foreground/80 pl-1">Your Name</Label>
             <Input 
               id="firstName" 
               placeholder="e.g. Jane Doe" 
               {...form.register("firstName")}
-              className="bg-transparent border-t-0 border-x-0 border-b-2 rounded-none focus-visible:ring-0 px-0 h-12 text-lg font-serif placeholder:font-sans placeholder:text-muted-foreground/50 border-input focus:border-primary transition-colors"
+              className="bg-secondary/10 border-transparent hover:bg-secondary/20 focus:bg-white focus:border-primary/20 rounded-lg h-12 text-lg font-serif placeholder:font-sans placeholder:text-muted-foreground/40 placeholder:font-normal transition-all duration-300"
             />
             {form.formState.errors.firstName && (
-              <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
+              <p className="text-xs text-destructive pl-1">{form.formState.errors.firstName.message}</p>
             )}
           </div>
 
           {/* Attendance */}
           <div className="space-y-3">
-            <Label className="uppercase text-xs tracking-wider text-muted-foreground">Will you be attending?</Label>
+            <Label className="uppercase text-xs font-semibold tracking-widest text-muted-foreground/80 pl-1">Will you be attending?</Label>
             <RadioGroup 
               defaultValue="yes" 
               onValueChange={(val) => form.setValue("attending", val as "yes" | "no")}
@@ -132,26 +132,20 @@ export function RSVPForm() {
                 <RadioGroupItem value="yes" id="yes" className="peer sr-only" />
                 <Label
                   htmlFor="yes"
-                  className="flex flex-row sm:flex-col items-center justify-center sm:justify-center gap-3 sm:gap-1 rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:text-primary cursor-pointer transition-all h-full"
+                  className="flex flex-row items-center justify-between px-4 py-3 rounded-lg border bg-white border-border hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground peer-data-[state=checked]:shadow-md cursor-pointer transition-all duration-200 group"
                 >
-                   <div className="flex items-center justify-center w-6 h-6 rounded-full border border-primary/20 text-transparent peer-data-[state=checked]:text-primary bg-white sm:hidden">
-                    <Check className="w-3 h-3" />
-                  </div>
-                  <span className="text-base sm:text-lg font-serif">Joyfully Accept</span>
-                  <Check className="h-4 w-4 hidden sm:block" />
+                  <span className="text-base font-medium font-serif">Joyfully Accept</span>
+                  <Check className="h-4 w-4 opacity-0 group-hover:opacity-50 peer-data-[state=checked]:opacity-100 transition-opacity" />
                 </Label>
               </div>
               <div>
                 <RadioGroupItem value="no" id="no" className="peer sr-only" />
                 <Label
                   htmlFor="no"
-                  className="flex flex-row sm:flex-col items-center justify-center sm:justify-center gap-3 sm:gap-1 rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive/5 peer-data-[state=checked]:text-destructive cursor-pointer transition-all h-full"
+                  className="flex flex-row items-center justify-between px-4 py-3 rounded-lg border bg-white border-border hover:border-destructive/50 peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive peer-data-[state=checked]:text-destructive-foreground peer-data-[state=checked]:shadow-md cursor-pointer transition-all duration-200 group"
                 >
-                   <div className="flex items-center justify-center w-6 h-6 rounded-full border border-destructive/20 text-transparent peer-data-[state=checked]:text-destructive bg-white sm:hidden">
-                    <span className="text-xs">✕</span>
-                  </div>
-                  <span className="text-base sm:text-lg font-serif">Regretfully Decline</span>
-                  <span className="text-lg hidden sm:block">✕</span>
+                  <span className="text-base font-medium font-serif">Regretfully Decline</span>
+                  <span className="text-lg leading-none opacity-0 group-hover:opacity-50 peer-data-[state=checked]:opacity-100 transition-opacity">✕</span>
                 </Label>
               </div>
             </RadioGroup>
@@ -163,30 +157,29 @@ export function RSVPForm() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-6 overflow-hidden"
+                className="space-y-6 overflow-hidden pt-2"
               >
-                <Separator className="bg-border/50" />
-
                 {/* Plus One */}
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Bringing a Guest?</Label>
+                <div className="flex items-center justify-between bg-secondary/5 p-3 rounded-lg border border-transparent hover:border-border/50 transition-colors">
+                  <div className="space-y-1">
+                    <Label className="text-base font-serif text-primary">Bringing a Guest?</Label>
                     <p className="text-xs text-muted-foreground">Is someone joining you?</p>
                   </div>
                   <Switch 
                     checked={form.watch("plusOne")}
                     onCheckedChange={(checked) => form.setValue("plusOne", checked)}
+                    className="data-[state=checked]:bg-primary"
                   />
                 </div>
 
                 {/* Items to Bring */}
                 <div className="space-y-2">
-                  <Label className="text-base flex items-center gap-2">
-                    <Utensils className="w-4 h-4 text-primary" />
-                    Like to bring something?
+                  <Label className="uppercase text-xs font-semibold tracking-widest text-muted-foreground/80 pl-1 flex items-center gap-2">
+                    <Utensils className="w-3 h-3 text-primary" />
+                    Potluck Contribution
                   </Label>
                   <Select onValueChange={(val) => form.setValue("itemId", val)}>
-                    <SelectTrigger className="w-full bg-secondary/20 border-border">
+                    <SelectTrigger className="w-full h-12 bg-white border-border focus:ring-1 focus:ring-primary/20 text-base">
                       <SelectValue placeholder="Select a dish to bring (Optional)" />
                     </SelectTrigger>
                     <SelectContent>
@@ -198,15 +191,12 @@ export function RSVPForm() {
                       ))}
                       {/* Show unavailable items as disabled so user sees they are taken */}
                       {items.filter(i => i.assignee).map(item => (
-                        <SelectItem key={item.id} value={item.id} disabled className="opacity-50">
+                        <SelectItem key={item.id} value={item.id} disabled className="opacity-50 italic">
                           {item.name} (Taken by {item.assignee})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Items claimed by others are shown as unavailable.
-                  </p>
                 </div>
               </motion.div>
             )}
@@ -214,18 +204,15 @@ export function RSVPForm() {
 
           {/* Notes */}
           <div className="space-y-2 pt-2">
-            <Label htmlFor="note" className="uppercase text-xs tracking-wider text-muted-foreground flex items-center justify-between">
-              <span>Any Special Requests?</span>
-              <span className="text-[10px] normal-case opacity-70">(Optional)</span>
+            <Label htmlFor="note" className="uppercase text-xs font-semibold tracking-widest text-muted-foreground/80 pl-1 flex items-center justify-between">
+              <span>Special Requests</span>
+              <span className="text-[10px] opacity-60 font-normal normal-case">(Optional)</span>
             </Label>
-            <p className="text-xs text-muted-foreground italic">
-              Let us know if you'll be running late, need help with location/parking, or have dietary restrictions.
-            </p>
             <Textarea 
               id="note" 
-              placeholder="e.g. I might be 15 mins late due to work..." 
+              placeholder="Let us know if you'll be running late, need help with location, or have dietary restrictions..." 
               {...form.register("note")}
-              className="resize-none bg-secondary/10 border-border focus:border-primary min-h-[100px]"
+              className="resize-none bg-secondary/10 border-transparent focus:bg-white focus:border-primary/20 min-h-[100px] text-base placeholder:text-muted-foreground/40 placeholder:font-sans transition-all duration-300"
             />
           </div>
 
