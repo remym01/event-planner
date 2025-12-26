@@ -7,26 +7,25 @@ import { useEffect } from "react";
 export default function Home() {
   const { config } = useEvent();
   
+  const fontStyle = config?.fontStyle || 'serif';
+  
   // Apply theme color dynamically
   useEffect(() => {
     if (config?.themeColor) {
       document.documentElement.style.setProperty('--primary', config.themeColor);
       document.documentElement.style.setProperty('--ring', config.themeColor);
-      // Approximate a lighter shade for backgrounds/accents if needed, or just rely on opacity
     }
     
-    // Apply font style
+    // Apply font style to root element
     const root = document.getElementById('root');
     if (root) {
       root.classList.remove('font-serif', 'font-sans', 'font-mono');
-      if (config?.fontStyle === 'serif') root.classList.add('font-serif');
-      if (config?.fontStyle === 'sans') root.classList.add('font-sans');
-      if (config?.fontStyle === 'mono') root.classList.add('font-mono');
+      root.classList.add(`font-${fontStyle}`);
     }
-  }, [config?.themeColor, config?.fontStyle]);
+  }, [config?.themeColor, fontStyle]);
 
   return (
-    <div className={`min-h-screen w-full bg-background flex flex-col items-center justify-center relative overflow-hidden ${config?.fontStyle === 'serif' ? 'font-serif' : config?.fontStyle === 'mono' ? 'font-mono' : 'font-sans'}`}>
+    <div className={`min-h-screen w-full bg-background flex flex-col items-center justify-center relative overflow-hidden font-${fontStyle}`}>
       {/* Background Layer with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
