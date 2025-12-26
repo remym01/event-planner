@@ -157,6 +157,14 @@ export function RSVPForm() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
+                onAnimationComplete={(definition: any) => {
+                  // Remove overflow hidden after animation completes to allow dropdowns to pop out
+                  if (definition.height === "auto" || (typeof definition === "object" && definition.height === "auto")) {
+                    const el = document.getElementById('attending-section');
+                    if (el) el.style.overflow = 'visible';
+                  }
+                }}
+                id="attending-section"
                 className="space-y-6 overflow-hidden pt-2"
               >
                 {/* Plus One */}
@@ -179,7 +187,7 @@ export function RSVPForm() {
                     Potluck Contribution
                   </Label>
                   <Select onValueChange={(val) => form.setValue("itemId", val)}>
-                    <SelectTrigger className="w-full h-12 bg-white border-border focus:ring-1 focus:ring-primary/20 text-base">
+                    <SelectTrigger className="w-full h-12 bg-white border-border focus:ring-1 focus:ring-primary/20 text-base px-4">
                       <SelectValue placeholder="Select a dish to bring (Optional)" />
                     </SelectTrigger>
                     <SelectContent>
