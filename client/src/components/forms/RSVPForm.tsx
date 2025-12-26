@@ -26,7 +26,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function RSVPForm() {
-  const { config, items, addRSVP, currentUser } = useEvent();
+  const { config, items, addRSVP, currentUser, isLoading } = useEvent();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<FormValues>({
@@ -43,6 +43,18 @@ export function RSVPForm() {
   const attending = form.watch("attending");
   const availableItems = items.filter(i => !i.assignee);
 
+  // Show loading state while data is being fetched
+  if (isLoading || !config) {
+    return (
+      <Card className="w-full max-w-md mx-auto border-none shadow-soft bg-white/95 backdrop-blur-sm">
+        <CardContent className="pt-12 pb-12 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
+          <p className="text-muted-foreground">Loading event details...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     // Simulate network delay for "Secure" feel
@@ -52,8 +64,8 @@ export function RSVPForm() {
       firstName: data.firstName,
       attending: data.attending === "yes",
       plusOne: data.plusOne,
-      note: data.note || undefined,
-      itemId: data.itemId,
+      note: data.note || null,
+      itemId: data.itemId ?? null,
     });
     
     setIsSubmitting(false);
