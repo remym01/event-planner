@@ -126,26 +126,32 @@ export function RSVPForm() {
             <RadioGroup 
               defaultValue="yes" 
               onValueChange={(val) => form.setValue("attending", val as "yes" | "no")}
-              className="flex gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
-              <div className="flex-1">
+              <div>
                 <RadioGroupItem value="yes" id="yes" className="peer sr-only" />
                 <Label
                   htmlFor="yes"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer transition-all"
+                  className="flex flex-row sm:flex-col items-center justify-center sm:justify-center gap-3 sm:gap-1 rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:text-primary cursor-pointer transition-all h-full"
                 >
-                  <span className="text-lg font-serif mb-1">Joyfully Accept</span>
-                  <Check className="h-4 w-4" />
+                   <div className="flex items-center justify-center w-6 h-6 rounded-full border border-primary/20 text-transparent peer-data-[state=checked]:text-primary bg-white sm:hidden">
+                    <Check className="w-3 h-3" />
+                  </div>
+                  <span className="text-base sm:text-lg font-serif">Joyfully Accept</span>
+                  <Check className="h-4 w-4 hidden sm:block" />
                 </Label>
               </div>
-              <div className="flex-1">
+              <div>
                 <RadioGroupItem value="no" id="no" className="peer sr-only" />
                 <Label
                   htmlFor="no"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-destructive peer-data-[state=checked]:text-destructive cursor-pointer transition-all"
+                  className="flex flex-row sm:flex-col items-center justify-center sm:justify-center gap-3 sm:gap-1 rounded-lg border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive/5 peer-data-[state=checked]:text-destructive cursor-pointer transition-all h-full"
                 >
-                  <span className="text-lg font-serif mb-1">Regretfully Decline</span>
-                  <span className="text-lg">✕</span>
+                   <div className="flex items-center justify-center w-6 h-6 rounded-full border border-destructive/20 text-transparent peer-data-[state=checked]:text-destructive bg-white sm:hidden">
+                    <span className="text-xs">✕</span>
+                  </div>
+                  <span className="text-base sm:text-lg font-serif">Regretfully Decline</span>
+                  <span className="text-lg hidden sm:block">✕</span>
                 </Label>
               </div>
             </RadioGroup>
@@ -207,13 +213,19 @@ export function RSVPForm() {
           </AnimatePresence>
 
           {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="note" className="uppercase text-xs tracking-wider text-muted-foreground">Any notes?</Label>
+          <div className="space-y-2 pt-2">
+            <Label htmlFor="note" className="uppercase text-xs tracking-wider text-muted-foreground flex items-center justify-between">
+              <span>Any Special Requests?</span>
+              <span className="text-[10px] normal-case opacity-70">(Optional)</span>
+            </Label>
+            <p className="text-xs text-muted-foreground italic">
+              Let us know if you'll be running late, need help with location/parking, or have dietary restrictions.
+            </p>
             <Textarea 
               id="note" 
-              placeholder="Running late? Dietary restrictions?" 
+              placeholder="e.g. I might be 15 mins late due to work..." 
               {...form.register("note")}
-              className="resize-none bg-secondary/10 border-border focus:border-primary"
+              className="resize-none bg-secondary/10 border-border focus:border-primary min-h-[100px]"
             />
           </div>
 
