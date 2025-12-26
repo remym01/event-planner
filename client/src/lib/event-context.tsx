@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { EventConfig, Item, Rsvp } from '@shared/schema';
 
@@ -8,7 +8,7 @@ export type RSVP = Rsvp & { itemId?: number | null };
 
 type EventContextType = {
   config: EventConfig | undefined;
-  updateConfig: (newConfig: Partial<EventConfig>) => Promise<void>;
+  updateConfig: (newConfig: Partial<EventConfig>) => void;
   
   items: Item[];
   addItem: (name: string) => Promise<void>;
@@ -19,26 +19,22 @@ type EventContextType = {
   rsvps: Rsvp[];
   addRSVP: (rsvp: Omit<Rsvp, 'id' | 'createdAt'>) => Promise<void>;
   
-  // "Session" state for the current user filling the form
   currentUser: Rsvp | null;
   setCurrentUser: (user: Rsvp | null) => void;
   
-  // Admin helpers
   resetSession: () => void;
-  
-  // Loading states
   isLoading: boolean;
 };
-
-// --- Context ---
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [currentUser, setCurrentUser] = useState<Rsvp | null>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingConfigRef = useRef<Partial<EventConfig>>({});
 
-  // Fetch event config
+  // Fetch event config with caching
   const { data: config, isLoading: configLoading } = useQuery({
     queryKey: ['config'],
     queryFn: async () => {
@@ -46,9 +42,11 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to fetch config');
       return res.json() as Promise<EventConfig>;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch items
+  // Fetch items with caching
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['items'],
     queryFn: async () => {
@@ -56,9 +54,11 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to fetch items');
       return res.json() as Promise<Item[]>;
     },
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch RSVPs
+  // Fetch RSVPs with caching
   const { data: rsvps = [], isLoading: rsvpsLoading } = useQuery({
     queryKey: ['rsvps'],
     queryFn: async () => {
@@ -66,9 +66,11 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to fetch RSVPs');
       return res.json() as Promise<Rsvp[]>;
     },
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
   });
 
-  // Update config mutation
+  // Update config mutation with optimistic updates
   const updateConfigMutation = useMutation({
     mutationFn: async (newConfig: Partial<EventConfig>) => {
       const res = await fetch('/api/config', {
@@ -79,10 +81,41 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to update config');
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['config'] });
+    onMutate: async (newConfig) => {
+      await queryClient.cancelQueries({ queryKey: ['config'] });
+      const previousConfig = queryClient.getQueryData(['config']);
+      queryClient.setQueryData(['config'], (old: EventConfig | undefined) => 
+        old ? { ...old, ...newConfig } : old
+      );
+      return { previousConfig };
+    },
+    onError: (_err, _newConfig, context) => {
+      if (context?.previousConfig) {
+        queryClient.setQueryData(['config'], context.previousConfig);
+      }
     },
   });
+
+  // Debounced config update
+  const updateConfig = useCallback((newConfig: Partial<EventConfig>) => {
+    pendingConfigRef.current = { ...pendingConfigRef.current, ...newConfig };
+    
+    // Immediately update the UI optimistically
+    queryClient.setQueryData(['config'], (old: EventConfig | undefined) => 
+      old ? { ...old, ...newConfig } : old
+    );
+    
+    // Debounce the actual API call
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    debounceRef.current = setTimeout(() => {
+      const configToSave = { ...pendingConfigRef.current };
+      pendingConfigRef.current = {};
+      updateConfigMutation.mutate(configToSave);
+    }, 500);
+  }, [queryClient, updateConfigMutation]);
 
   // Add item mutation
   const addItemMutation = useMutation({
@@ -95,8 +128,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to add item');
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+    onSuccess: (newItem) => {
+      queryClient.setQueryData(['items'], (old: Item[] | undefined) => 
+        old ? [...old, newItem] : [newItem]
+      );
     },
   });
 
@@ -105,9 +140,20 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to remove item');
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['items'] });
+      const previousItems = queryClient.getQueryData(['items']);
+      queryClient.setQueryData(['items'], (old: Item[] | undefined) => 
+        old ? old.filter(item => item.id !== id) : []
+      );
+      return { previousItems };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['items'], context.previousItems);
+      }
     },
   });
 
@@ -122,8 +168,18 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to update item');
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+    onMutate: async ({ id, assignee }) => {
+      await queryClient.cancelQueries({ queryKey: ['items'] });
+      const previousItems = queryClient.getQueryData(['items']);
+      queryClient.setQueryData(['items'], (old: Item[] | undefined) => 
+        old ? old.map(item => item.id === id ? { ...item, assignee } : item) : []
+      );
+      return { previousItems };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['items'], context.previousItems);
+      }
     },
   });
 
@@ -139,15 +195,12 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       return res.json() as Promise<Rsvp>;
     },
     onSuccess: (newRsvp) => {
-      queryClient.invalidateQueries({ queryKey: ['rsvps'] });
+      queryClient.setQueryData(['rsvps'], (old: Rsvp[] | undefined) => 
+        old ? [...old, newRsvp] : [newRsvp]
+      );
       setCurrentUser(newRsvp);
     },
   });
-
-  // Actions
-  const updateConfig = async (newConfig: Partial<EventConfig>) => {
-    await updateConfigMutation.mutateAsync(newConfig);
-  };
 
   const addItem = async (name: string) => {
     await addItemMutation.mutateAsync(name);
@@ -166,9 +219,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addRSVP = async (newRSVP: Omit<Rsvp, 'id' | 'createdAt'>) => {
-    const rsvp = await addRSVPMutation.mutateAsync(newRSVP);
+    await addRSVPMutation.mutateAsync(newRSVP);
     
-    // If they selected an item, claim it
     if (newRSVP.itemId) {
       await claimItem(newRSVP.itemId, newRSVP.firstName);
     }
