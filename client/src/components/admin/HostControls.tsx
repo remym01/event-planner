@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, Plus, Trash, User, RefreshCw, Share2, Mail, Link as LinkIcon, Lock, Unlock } from "lucide-react";
+import { Settings, Plus, Trash, User, RefreshCw, Share2, Mail, Link as LinkIcon, Lock, Unlock, Image as ImageIcon, Type, Palette, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function AdminControls() {
   const { 
@@ -59,8 +60,6 @@ export function AdminControls() {
   };
 
   const mailToGuests = () => {
-    // Collect all emails (simulated for now since we don't ask for email in RSVP yet, but could be added)
-    // Or just open a generic mailto
     const subject = encodeURIComponent(`You're invited: ${config.title}`);
     const body = encodeURIComponent(`Hi everyone,\n\nPlease RSVP for ${config.title} using this link:\n${window.location.href}\n\nBest,\nHost`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
@@ -115,6 +114,81 @@ export function AdminControls() {
                   Email Invite
                 </Button>
               </div>
+            </div>
+
+            {/* Section: Theme Customization */}
+            <div className="space-y-4">
+               <h3 className="uppercase text-xs font-semibold tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
+                 <Palette className="w-4 h-4" /> Customization
+               </h3>
+               
+               {/* Background Image */}
+               <div className="space-y-2">
+                 <Label className="text-xs font-medium">Background Image URL</Label>
+                 <div className="flex gap-2">
+                   <Input 
+                     value={config.backgroundImageUrl || ''} 
+                     onChange={(e) => updateConfig({ backgroundImageUrl: e.target.value })}
+                     placeholder="Paste image URL here..."
+                     className="text-xs"
+                   />
+                   <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     title="Revert to Original"
+                     onClick={() => updateConfig({ backgroundImageUrl: "" })}
+                     disabled={!config.backgroundImageUrl}
+                   >
+                     <RotateCcw className="w-4 h-4" />
+                   </Button>
+                 </div>
+                 <p className="text-[10px] text-muted-foreground">Clear text to revert to original background.</p>
+               </div>
+
+               {/* Font Style */}
+               <div className="space-y-2">
+                 <Label className="text-xs font-medium flex items-center gap-2"><Type className="w-3 h-3"/> Font Style</Label>
+                 <RadioGroup 
+                   value={config.fontStyle || 'serif'} 
+                   onValueChange={(val) => updateConfig({ fontStyle: val as any })}
+                   className="flex gap-2"
+                 >
+                   <div className="flex items-center space-x-2 border rounded-md p-2 flex-1 justify-center cursor-pointer hover:bg-secondary/20">
+                     <RadioGroupItem value="serif" id="font-serif" />
+                     <Label htmlFor="font-serif" className="font-serif cursor-pointer">Serif</Label>
+                   </div>
+                   <div className="flex items-center space-x-2 border rounded-md p-2 flex-1 justify-center cursor-pointer hover:bg-secondary/20">
+                     <RadioGroupItem value="sans" id="font-sans" />
+                     <Label htmlFor="font-sans" className="font-sans cursor-pointer">Sans</Label>
+                   </div>
+                   <div className="flex items-center space-x-2 border rounded-md p-2 flex-1 justify-center cursor-pointer hover:bg-secondary/20">
+                     <RadioGroupItem value="mono" id="font-mono" />
+                     <Label htmlFor="font-mono" className="font-mono cursor-pointer">Mono</Label>
+                   </div>
+                 </RadioGroup>
+               </div>
+
+               {/* Theme Color */}
+               <div className="space-y-2">
+                 <Label className="text-xs font-medium">Theme Color</Label>
+                 <div className="grid grid-cols-5 gap-2">
+                   {[
+                     { name: 'Sage', value: 'hsl(145 20% 35%)' },
+                     { name: 'Navy', value: 'hsl(220 40% 30%)' },
+                     { name: 'Wine', value: 'hsl(350 30% 30%)' },
+                     { name: 'Gold', value: 'hsl(40 40% 40%)' },
+                     { name: 'Black', value: 'hsl(0 0% 20%)' }
+                   ].map((color) => (
+                     <button
+                       key={color.name}
+                       onClick={() => updateConfig({ themeColor: color.value })}
+                       className={`w-full aspect-square rounded-full border-2 transition-all ${config.themeColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary/30' : 'border-transparent'}`}
+                       style={{ backgroundColor: color.value }}
+                       title={color.name}
+                     />
+                   ))}
+                 </div>
+               </div>
             </div>
 
             {/* Section: Event Details */}

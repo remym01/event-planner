@@ -15,6 +15,9 @@ export type EventConfig = {
   date: string;
   time: string;
   location: string;
+  backgroundImageUrl?: string;
+  themeColor?: string;
+  fontStyle?: 'serif' | 'sans' | 'mono';
 };
 
 export type RSVP = {
@@ -55,7 +58,10 @@ const INITIAL_CONFIG: EventConfig = {
   description: "Join us for an evening of good food, great company, and warm memories. Please let us know if you can make it!",
   date: "2024-12-20",
   time: "18:00",
-  location: "123 Maple Avenue"
+  location: "123 Maple Avenue",
+  backgroundImageUrl: "",
+  themeColor: "hsl(145 20% 35%)", // Sage Green default
+  fontStyle: "serif"
 };
 
 const INITIAL_ITEMS: Item[] = [
