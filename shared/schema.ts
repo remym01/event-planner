@@ -14,6 +14,9 @@ export const eventConfig = pgTable("event_config", {
   themeColor: text("theme_color").default("hsl(145 20% 35%)"),
   fontStyle: text("font_style").default("serif"),
   confirmationMessage: text("confirmation_message").default("We're delighted you can join us. Your response has been recorded."),
+  secretSantaEnabled: boolean("secret_santa_enabled").default(false),
+  secretSantaGiftLimit: integer("secret_santa_gift_limit").default(20),
+  secretSantaDrawCompleted: boolean("secret_santa_draw_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -22,7 +25,7 @@ export const eventConfig = pgTable("event_config", {
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  assignee: text("assignee"), // Name of person bringing it
+  assignee: text("assignee"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -33,7 +36,17 @@ export const rsvps = pgTable("rsvps", {
   attending: boolean("attending").notNull(),
   plusOne: boolean("plus_one").notNull().default(false),
   note: text("note"),
-  itemId: integer("item_id"), // Reference to items table
+  itemId: integer("item_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Secret Santa participants table
+export const secretSantaParticipants = pgTable("secret_santa_participants", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  preferences: text("preferences").notNull(),
+  matchedWithId: integer("matched_with_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -54,6 +67,12 @@ export const insertRsvpSchema = createInsertSchema(rsvps).omit({
   createdAt: true,
 });
 
+export const insertSecretSantaParticipantSchema = createInsertSchema(secretSantaParticipants).omit({
+  id: true,
+  createdAt: true,
+  matchedWithId: true,
+});
+
 // TypeScript types
 export type EventConfig = typeof eventConfig.$inferSelect;
 export type InsertEventConfig = z.infer<typeof insertEventConfigSchema>;
@@ -63,3 +82,6 @@ export type InsertItem = z.infer<typeof insertItemSchema>;
 
 export type Rsvp = typeof rsvps.$inferSelect;
 export type InsertRsvp = z.infer<typeof insertRsvpSchema>;
+
+export type SecretSantaParticipant = typeof secretSantaParticipants.$inferSelect;
+export type InsertSecretSantaParticipant = z.infer<typeof insertSecretSantaParticipantSchema>;

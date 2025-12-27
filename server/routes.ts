@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEventConfigSchema, insertItemSchema, insertRsvpSchema } from "@shared/schema";
+import { insertEventConfigSchema, insertItemSchema, insertRsvpSchema, insertSecretSantaParticipantSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -96,6 +96,75 @@ export async function registerRoutes(
       res.json({ valid: true });
     } else {
       res.json({ valid: false });
+    }
+  });
+
+  // Secret Santa routes
+  app.get("/api/secret-santa/participants", async (_req, res) => {
+    try {
+      const participants = await storage.getAllSecretSantaParticipants();
+      res.json(participants);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch participants" });
+    }
+  });
+
+  app.post("/api/secret-santa/join", async (req, res) => {
+    try {
+      const validated = insertSecretSantaParticipantSchema.parse(req.body);
+      
+      // Check if already joined
+      const existing = await storage.getSecretSantaParticipantByName(validated.name);
+      if (existing) {
+        return res.status(400).json({ error: "You have already joined the Secret Santa!" });
+      }
+      
+      const participant = await storage.createSecretSantaParticipant(validated);
+      res.status(201).json(participant);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid request data" });
+    }
+  });
+
+  app.get("/api/secret-santa/my-match/:name", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const participant = await storage.getSecretSantaParticipantByName(name);
+      
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      if (!participant.matchedWithId) {
+        return res.json({ matched: false, message: "Draw has not been completed yet" });
+      }
+      
+      const match = await storage.getSecretSantaMatch(participant.id);
+      res.json({ matched: true, match });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get match" });
+    }
+  });
+
+  app.post("/api/secret-santa/draw", async (req, res) => {
+    try {
+      const success = await storage.performSecretSantaDraw();
+      if (success) {
+        res.json({ success: true, message: "Secret Santa draw completed!" });
+      } else {
+        res.status(400).json({ error: "Need at least 2 participants for the draw" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to perform draw" });
+    }
+  });
+
+  app.post("/api/secret-santa/reset", async (req, res) => {
+    try {
+      await storage.resetSecretSantaDraw();
+      res.json({ success: true, message: "Secret Santa draw has been reset" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to reset draw" });
     }
   });
 

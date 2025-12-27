@@ -1,6 +1,6 @@
-import { eventConfig, items, rsvps, type EventConfig, type InsertEventConfig, type Item, type InsertItem, type Rsvp, type InsertRsvp } from "@shared/schema";
+import { eventConfig, items, rsvps, secretSantaParticipants, type EventConfig, type InsertEventConfig, type Item, type InsertItem, type Rsvp, type InsertRsvp, type SecretSantaParticipant, type InsertSecretSantaParticipant } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Event Config
@@ -16,6 +16,14 @@ export interface IStorage {
   // RSVPs
   getAllRsvps(): Promise<Rsvp[]>;
   createRsvp(rsvp: InsertRsvp): Promise<Rsvp>;
+  
+  // Secret Santa
+  getAllSecretSantaParticipants(): Promise<SecretSantaParticipant[]>;
+  createSecretSantaParticipant(participant: InsertSecretSantaParticipant): Promise<SecretSantaParticipant>;
+  getSecretSantaParticipantByName(name: string): Promise<SecretSantaParticipant | undefined>;
+  getSecretSantaMatch(participantId: number): Promise<SecretSantaParticipant | undefined>;
+  performSecretSantaDraw(): Promise<boolean>;
+  resetSecretSantaDraw(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -23,7 +31,6 @@ export class DatabaseStorage implements IStorage {
   async getEventConfig(): Promise<EventConfig | undefined> {
     const [config] = await db.select().from(eventConfig).limit(1);
     
-    // If no config exists, create default one
     if (!config) {
       const [newConfig] = await db
         .insert(eventConfig)
@@ -92,6 +99,80 @@ export class DatabaseStorage implements IStorage {
       .values(rsvp)
       .returning();
     return newRsvp;
+  }
+
+  // Secret Santa methods
+  async getAllSecretSantaParticipants(): Promise<SecretSantaParticipant[]> {
+    return await db.select().from(secretSantaParticipants);
+  }
+
+  async createSecretSantaParticipant(participant: InsertSecretSantaParticipant): Promise<SecretSantaParticipant> {
+    const [newParticipant] = await db
+      .insert(secretSantaParticipants)
+      .values(participant)
+      .returning();
+    return newParticipant;
+  }
+
+  async getSecretSantaParticipantByName(name: string): Promise<SecretSantaParticipant | undefined> {
+    const [participant] = await db
+      .select()
+      .from(secretSantaParticipants)
+      .where(eq(secretSantaParticipants.name, name));
+    return participant;
+  }
+
+  async getSecretSantaMatch(participantId: number): Promise<SecretSantaParticipant | undefined> {
+    const [participant] = await db
+      .select()
+      .from(secretSantaParticipants)
+      .where(eq(secretSantaParticipants.id, participantId));
+    
+    if (!participant?.matchedWithId) return undefined;
+    
+    const [match] = await db
+      .select()
+      .from(secretSantaParticipants)
+      .where(eq(secretSantaParticipants.id, participant.matchedWithId));
+    
+    return match;
+  }
+
+  async performSecretSantaDraw(): Promise<boolean> {
+    const participants = await this.getAllSecretSantaParticipants();
+    
+    if (participants.length < 2) {
+      return false;
+    }
+
+    // Shuffle participants for random matching
+    const shuffled = [...participants].sort(() => Math.random() - 0.5);
+    
+    // Create circular matching (each person gives to next person in shuffled list)
+    for (let i = 0; i < shuffled.length; i++) {
+      const giver = shuffled[i];
+      const receiver = shuffled[(i + 1) % shuffled.length];
+      
+      await db
+        .update(secretSantaParticipants)
+        .set({ matchedWithId: receiver.id })
+        .where(eq(secretSantaParticipants.id, giver.id));
+    }
+
+    // Mark draw as completed in config
+    await this.updateEventConfig({ secretSantaDrawCompleted: true } as any);
+    
+    return true;
+  }
+
+  async resetSecretSantaDraw(): Promise<void> {
+    // Clear all matches
+    await db
+      .update(secretSantaParticipants)
+      .set({ matchedWithId: null });
+    
+    // Reset draw completed flag
+    await this.updateEventConfig({ secretSantaDrawCompleted: false } as any);
   }
 }
 
