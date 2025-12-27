@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Check, Utensils, Clock, Users, Gift, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SecretSantaSection } from './SecretSantaSection';
 
 const formSchema = z.object({
   firstName: z.string().min(2, "Name is required"),
@@ -73,6 +74,7 @@ export function RSVPForm() {
 
   if (currentUser) {
     return (
+      <div className="space-y-0">
       <Card className="w-full max-w-md mx-auto overflow-hidden border-none shadow-soft bg-white/90 backdrop-blur-sm">
         <CardContent className="pt-6 text-center space-y-6">
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-4">
@@ -99,6 +101,11 @@ export function RSVPForm() {
           </div>
         </CardContent>
       </Card>
+
+      {currentUser.attending && config && (
+        <SecretSantaSection userName={currentUser.firstName} config={config} />
+      )}
+    </div>
     );
   }
 
