@@ -1,6 +1,6 @@
 import { eventConfig, items, rsvps, secretSantaParticipants, type EventConfig, type InsertEventConfig, type Item, type InsertItem, type Rsvp, type InsertRsvp, type SecretSantaParticipant, type InsertSecretSantaParticipant } from "@shared/schema";
 import { db } from "./db";
-import { eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Event Config
@@ -115,10 +115,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSecretSantaParticipantByName(name: string): Promise<SecretSantaParticipant | undefined> {
-    const [participant] = await db
-      .select()
-      .from(secretSantaParticipants)
-      .where(eq(secretSantaParticipants.name, name));
+    const participants = await db.select().from(secretSantaParticipants);
+    const participant = participants.find(p => p.name.toLowerCase() === name.toLowerCase());
     return participant;
   }
 
@@ -148,21 +146,29 @@ export class DatabaseStorage implements IStorage {
     // Shuffle participants for random matching
     const shuffled = [...participants].sort(() => Math.random() - 0.5);
     
-    // Create circular matching (each person gives to next person in shuffled list)
-    for (let i = 0; i < shuffled.length; i++) {
-      const giver = shuffled[i];
-      const receiver = shuffled[(i + 1) % shuffled.length];
+    // Use a transaction for atomic updates
+    try {
+      await db.transaction(async (tx) => {
+        // Create circular matching (each person gives to next person in shuffled list)
+        for (let i = 0; i < shuffled.length; i++) {
+          const giver = shuffled[i];
+          const receiver = shuffled[(i + 1) % shuffled.length];
+          
+          await tx
+            .update(secretSantaParticipants)
+            .set({ matchedWithId: receiver.id })
+            .where(eq(secretSantaParticipants.id, giver.id));
+        }
+      });
       
-      await db
-        .update(secretSantaParticipants)
-        .set({ matchedWithId: receiver.id })
-        .where(eq(secretSantaParticipants.id, giver.id));
+      // Mark draw as completed in config
+      await this.updateEventConfig({ secretSantaDrawCompleted: true } as any);
+      
+      return true;
+    } catch (error) {
+      console.error('Secret Santa draw failed:', error);
+      return false;
     }
-
-    // Mark draw as completed in config
-    await this.updateEventConfig({ secretSantaDrawCompleted: true } as any);
-    
-    return true;
   }
 
   async resetSecretSantaDraw(): Promise<void> {

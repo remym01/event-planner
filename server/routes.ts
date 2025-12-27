@@ -148,6 +148,11 @@ export async function registerRoutes(
 
   app.post("/api/secret-santa/draw", async (req, res) => {
     try {
+      const { pin } = req.body;
+      if (pin !== "1234") {
+        return res.status(401).json({ error: "Unauthorized - invalid admin PIN" });
+      }
+      
       const success = await storage.performSecretSantaDraw();
       if (success) {
         res.json({ success: true, message: "Secret Santa draw completed!" });
@@ -161,6 +166,11 @@ export async function registerRoutes(
 
   app.post("/api/secret-santa/reset", async (req, res) => {
     try {
+      const { pin } = req.body;
+      if (pin !== "1234") {
+        return res.status(401).json({ error: "Unauthorized - invalid admin PIN" });
+      }
+      
       await storage.resetSecretSantaDraw();
       res.json({ success: true, message: "Secret Santa draw has been reset" });
     } catch (error) {

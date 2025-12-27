@@ -29,6 +29,8 @@ export function AdminControls() {
   const [newItemName, setNewItemName] = React.useState("");
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [pin, setPin] = React.useState("");
+  
+  const ADMIN_PIN = "1234";
 
   const { data: santaParticipants = [] } = useQuery({
     queryKey: ['secret-santa-participants'],
@@ -42,7 +44,11 @@ export function AdminControls() {
 
   const drawMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/secret-santa/draw', { method: 'POST' });
+      const res = await fetch('/api/secret-santa/draw', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: ADMIN_PIN }),
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'Failed to perform draw');
@@ -68,7 +74,11 @@ export function AdminControls() {
 
   const resetDrawMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/secret-santa/reset', { method: 'POST' });
+      const res = await fetch('/api/secret-santa/reset', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: ADMIN_PIN }),
+      });
       if (!res.ok) throw new Error('Failed to reset draw');
       return res.json();
     },
@@ -81,9 +91,6 @@ export function AdminControls() {
       });
     },
   });
-  
-  // Hardcoded simple PIN for mockup
-  const ADMIN_PIN = "1234";
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
