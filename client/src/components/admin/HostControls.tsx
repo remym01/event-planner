@@ -1,16 +1,19 @@
 import React from 'react';
 import { useEvent } from '@/lib/event-context';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Settings, Plus, Trash, User, RefreshCw, Share2, Mail, Link as LinkIcon, Lock, Unlock, Image as ImageIcon, Type, Palette, RotateCcw } from "lucide-react";
+import { Settings, Plus, Trash, User, RefreshCw, Share2, Mail, Link as LinkIcon, Lock, Unlock, Image as ImageIcon, Type, Palette, RotateCcw, Gift, Shuffle, RotateCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import type { SecretSantaParticipant } from '@shared/schema';
 
 export function AdminControls() {
   const { 
@@ -21,10 +24,63 @@ export function AdminControls() {
   } = useEvent();
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [newItemName, setNewItemName] = React.useState("");
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [pin, setPin] = React.useState("");
+
+  const { data: santaParticipants = [] } = useQuery({
+    queryKey: ['secret-santa-participants'],
+    queryFn: async () => {
+      const res = await fetch('/api/secret-santa/participants');
+      if (!res.ok) throw new Error('Failed to fetch participants');
+      return res.json() as Promise<SecretSantaParticipant[]>;
+    },
+    staleTime: 10000,
+  });
+
+  const drawMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/secret-santa/draw', { method: 'POST' });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to perform draw');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['secret-santa-participants'] });
+      queryClient.invalidateQueries({ queryKey: ['config'] });
+      toast({
+        title: "Draw Complete!",
+        description: "Secret Santa matches have been assigned.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Draw Failed",
+        description: error.message,
+      });
+    },
+  });
+
+  const resetDrawMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/secret-santa/reset', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to reset draw');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['secret-santa-participants'] });
+      queryClient.invalidateQueries({ queryKey: ['config'] });
+      toast({
+        title: "Draw Reset",
+        description: "All matches have been cleared.",
+      });
+    },
+  });
   
   // Hardcoded simple PIN for mockup
   const ADMIN_PIN = "1234";
@@ -315,6 +371,108 @@ export function AdminControls() {
                   </div>
                 )}
               </ScrollArea>
+            </div>
+
+            {/* Section: Secret Santa */}
+            <div className="space-y-4">
+              <h3 className="uppercase text-xs font-semibold tracking-widest text-muted-foreground border-b pb-2 flex items-center gap-2">
+                <Gift className="w-4 h-4 text-red-600" /> Secret Santa
+              </h3>
+              
+              <div className="flex items-center justify-between bg-red-50/50 p-3 rounded-lg border border-red-100">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">Enable Secret Santa</Label>
+                  <p className="text-xs text-muted-foreground">Allow guests to join the gift exchange</p>
+                </div>
+                <Switch 
+                  checked={config?.secretSantaEnabled || false}
+                  onCheckedChange={(checked) => updateConfig({ secretSantaEnabled: checked } as any)}
+                  data-testid="switch-secret-santa"
+                />
+              </div>
+
+              {config?.secretSantaEnabled && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Gift Price Limit ($)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={config?.secretSantaGiftLimit || 20}
+                      onChange={(e) => updateConfig({ secretSantaGiftLimit: parseInt(e.target.value) || 20 } as any)}
+                      className="w-32"
+                      data-testid="input-gift-limit"
+                    />
+                  </div>
+
+                  <div className="bg-muted/30 p-3 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Participants</span>
+                      <Badge variant="outline">{santaParticipants.length}</Badge>
+                    </div>
+                    
+                    {santaParticipants.length > 0 && (
+                      <ScrollArea className="h-[100px] w-full rounded-md border p-2 bg-white">
+                        <div className="space-y-2">
+                          {santaParticipants.map((p) => (
+                            <div key={p.id} className="text-xs flex items-center justify-between">
+                              <span className="font-medium">{p.name}</span>
+                              {p.matchedWithId && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Matched
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+
+                    {!config?.secretSantaDrawCompleted ? (
+                      <Button
+                        onClick={() => drawMutation.mutate()}
+                        disabled={santaParticipants.length < 2 || drawMutation.isPending}
+                        className="w-full bg-red-600 hover:bg-red-700"
+                        data-testid="button-draw"
+                      >
+                        {drawMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Shuffle className="w-4 h-4 mr-2" />
+                        )}
+                        Perform Draw ({santaParticipants.length} participants)
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <Badge className="w-full justify-center py-2 bg-green-100 text-green-800 border-green-200">
+                          Draw Complete!
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          onClick={() => resetDrawMutation.mutate()}
+                          disabled={resetDrawMutation.isPending}
+                          className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                          data-testid="button-reset-draw"
+                        >
+                          {resetDrawMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <RotateCw className="w-4 h-4 mr-2" />
+                          )}
+                          Reset Draw
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {santaParticipants.length < 2 && !config?.secretSantaDrawCompleted && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Need at least 2 participants to perform the draw
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Section: Testing Controls */}
