@@ -13,7 +13,8 @@ export async function registerRoutes(
       const config = await storage.getEventConfig();
       res.json(config);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch event config" });
+      console.error("Error fetching event config:", error);
+      res.status(500).json({ error: "Failed to fetch event config", details: String(error) });
     }
   });
 
@@ -33,7 +34,8 @@ export async function registerRoutes(
       const items = await storage.getAllItems();
       res.json(items);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch items" });
+      console.error("Error fetching items:", error);
+      res.status(500).json({ error: "Failed to fetch items", details: String(error) });
     }
   });
 
@@ -74,7 +76,8 @@ export async function registerRoutes(
       const rsvps = await storage.getAllRsvps();
       res.json(rsvps);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch RSVPs" });
+      console.error("Error fetching RSVPs:", error);
+      res.status(500).json({ error: "Failed to fetch RSVPs", details: String(error) });
     }
   });
 
@@ -105,7 +108,8 @@ export async function registerRoutes(
       const participants = await storage.getAllSecretSantaParticipants();
       res.json(participants);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch participants" });
+      console.error("Error fetching secret santa participants:", error);
+      res.status(500).json({ error: "Failed to fetch participants", details: String(error) });
     }
   });
 
